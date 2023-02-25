@@ -33,6 +33,7 @@ function operation() {
       } else if (action === "Depositar") {
         deposit();
       } else if (action === "Sacar") {
+        widthdraw();
       } else if (action === "Sair") {
         console.log(chalk.bgBlue.black("Obrigado por usar o Accounts!"));
         process.exit();
@@ -199,4 +200,70 @@ function getAccountBalance() {
       operation();
     })
     .catch((err) => console.log(err));
+}
+
+function widthdraw() {
+  inquirer
+    .prompt([
+      {
+        name: "accountName",
+        message: "Qual o nome da sua conta?",
+      },
+    ])
+    .then((answer) => {
+      const accountName = answer["accountName"];
+
+      if (!checkAccount(accountName)) {
+        return widthdraw();
+      }
+
+      inquirer
+        .prompt([
+          {
+            name: "amount",
+            message: "Quanto você deseja sacar?",
+          },
+        ])
+        .then((answer) => {
+          const amount = answer["amount"];
+
+          //remove an amount
+          removeAmount(accountName, amount);
+        })
+        .catch((err) => console.log(err));
+    })
+    .catch((err) => console.log(err));
+}
+
+function removeAmount(accountName, amount) {
+  const accountData = getAccount(accountName);
+
+  if (!amount) {
+    console.log(
+      chalk.bgRed.black("Ocorreu um erro, tente novamente mais tarde!")
+    );
+    return widthdraw();
+  }
+
+  if (amount <= accountData.balance) {
+    accountData.balance = parseFloat(accountData.balance) - parseFloat(amount);
+
+    fs.writeFileSync(
+      `accounts/${accountName}.json`,
+      JSON.stringify(accountData),
+      function (err) {
+        console.log(err);
+      }
+    );
+
+    console.log(chalk.green(`Você sacou RS${amount} da sua conta!`));
+    operation();
+  } else {
+    console.log(
+      chalk.bgRed.black(
+        "O valor que você digitou é maior que o saldo atual da conta, por favor tente outro valor."
+      )
+    );
+    return widthdraw();
+  }
 }
