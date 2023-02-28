@@ -18,6 +18,7 @@ function operation() {
           "Criar conta",
           "Consultar Saldo",
           "Depositar",
+          "Transferencia entre contas",
           "Sacar",
           "Sair",
         ],
@@ -32,6 +33,8 @@ function operation() {
         getAccountBalance();
       } else if (action === "Depositar") {
         deposit();
+      } else if (action === "Transferencia entre contas") {
+        accountTransference();
       } else if (action === "Sacar") {
         widthdraw();
       } else if (action === "Sair") {
@@ -161,7 +164,7 @@ function addAmount(accountName, amount) {
     }
   );
 
-  console.log(chalk.green(`Foi depositado RS${amount} na sua conta!`));
+  console.log(chalk.green(`Foi depositado R$${amount} na sua conta!`));
 }
 
 function getAccount(accountName) {
@@ -194,7 +197,7 @@ function getAccountBalance() {
 
       console.log(
         chalk.bgBlue.black(
-          `Olá, o saldo da sua conta é de RS${accountData.balance}!`
+          `Olá, o saldo da sua conta é de R$${accountData.balance}!`
         )
       );
       operation();
@@ -256,7 +259,7 @@ function removeAmount(accountName, amount) {
       }
     );
 
-    console.log(chalk.green(`Você sacou RS${amount} da sua conta!`));
+    console.log(chalk.green(`Você sacou R$${amount} da sua conta!`));
     operation();
   } else {
     console.log(
@@ -266,4 +269,113 @@ function removeAmount(accountName, amount) {
     );
     return widthdraw();
   }
+}
+
+function accountTransference() {
+  inquirer
+    .prompt([
+      {
+        name: "accountName",
+        message: "Qual o nome da sua conta?",
+      },
+    ])
+    .then((answer) => {
+      const accountName = answer["accountName"];
+
+      if (!checkAccount(accountName)) {
+        return accountTransference();
+      }
+
+      inquirer
+        .prompt([
+          {
+            name: "accountTransfer",
+            message: "Qual o nome da conta para qual você deseja transferir?",
+          },
+        ])
+        .then((answer) => {
+          const accountTransfer = answer["accountTransfer"];
+
+          //remove an amount
+          if (!checkAccount(accountTransfer)) {
+            return accountTransference();
+          }
+
+          inquirer
+            .prompt([
+              {
+                name: "amount",
+                message: "Quanto você deseja transferir?",
+              },
+            ])
+            .then((answer) => {
+              const amount = answer["amount"];
+
+              //remove an amount
+              removeAmountTransfer(accountName, amount);
+              addAmountTransfer(accountTransfer, amount);
+              const accountData = getAccount(accountName);
+
+              console.log(
+                `Você transferiu R$ ${amount} para ${accountTransfer}, seu saldo atual é de R$ ${accountData.balance}`
+              );
+
+              operation();
+            })
+            .catch((err) => console.log(err));
+        })
+        .catch((err) => console.log(err));
+    })
+    .catch((err) => console.log(err));
+}
+
+function removeAmountTransfer(accountName, amount) {
+  const accountData = getAccount(accountName);
+
+  if (!amount) {
+    console.log(
+      chalk.bgRed.black("Ocorreu um erro, tente novamente mais tarde!")
+    );
+    return accountTransference();
+  }
+
+  if (amount <= accountData.balance) {
+    accountData.balance = parseFloat(accountData.balance) - parseFloat(amount);
+
+    fs.writeFileSync(
+      `accounts/${accountName}.json`,
+      JSON.stringify(accountData),
+      function (err) {
+        console.log(err);
+      }
+    );
+  } else {
+    console.log(
+      chalk.bgRed.black(
+        "O valor que você digitou é maior que o saldo atual da conta, por favor tente outro valor."
+      )
+    );
+    return accountTransference();
+  }
+}
+
+function addAmountTransfer(accountName, amount) {
+  const accountData = getAccount(accountName);
+
+  if (!amount) {
+    console.log(
+      chalk.bgRed.black("Ocorreu um erro, tente novamente mais tarde!")
+    );
+    return accountTransference();
+  }
+
+  accountData.balance = parseFloat(amount) + parseFloat(accountData.balance);
+
+  fs.writeFileSync(
+    `accounts/${accountName}.json`,
+    JSON.stringify(accountData),
+    function (err) {
+      console.log(err);
+    }
+  );
 }
